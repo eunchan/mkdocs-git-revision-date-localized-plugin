@@ -62,7 +62,7 @@ class GitRevisionDateLocalizedPlugin(BasePlugin):
         """
         if not self.config.get('enabled'):
             return config
-        
+
         assert self.config['type'] in ["date","datetime","iso_date","iso_datetime","timeago","custom"]
 
         self.util = Util(config=self.config)
@@ -137,7 +137,7 @@ class GitRevisionDateLocalizedPlugin(BasePlugin):
                 msg = "[git-revision-date-localized] should be defined after the i18n plugin in your mkdocs.yml file. "
                 msg += "This is because i18n adds a 'locale' variable to markdown pages that this plugin supports."
                 raise ConfigurationError(msg)
-        
+
         return config
 
     def on_page_markdown(
@@ -165,6 +165,9 @@ class GitRevisionDateLocalizedPlugin(BasePlugin):
         if not self.config.get('enabled'):
             return markdown
 
+        if not "date" in page.meta:
+            return markdown
+
         # Exclude pages specified in config
         excluded_pages = self.config.get("exclude", [])
         if exclude(page.file.src_path, excluded_pages):
@@ -188,14 +191,14 @@ class GitRevisionDateLocalizedPlugin(BasePlugin):
         # Finally, if no page locale set, we take the locale determined on_config()
         if not locale:
             locale = self.config.get("locale")
-        
+
         # MkDocs supports 2-letter and 5-letter locales
         # https://www.mkdocs.org/user-guide/localizing-your-theme/#supported-locales
         # We need the 2 letter variant
         if len(locale) == 5:
             locale = locale[:2]
         assert len(locale) == 2, "locale must be a 2 letter code, see https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes"
-        
+
         # Retrieve git commit timestamp
         # Except for generated pages (f.e. by mkdocs-gen-files plugin)
         if getattr(page.file, "generated_by", None):
@@ -254,16 +257,21 @@ class GitRevisionDateLocalizedPlugin(BasePlugin):
         # This is for speed: prevents another `git log` operation each file
         if not self.config.get("enable_creation_date"):
             return markdown
-    
+
         # Retrieve git commit timestamp
         # Except for generated pages (f.e. by mkdocs-gen-files plugin)
-        if getattr(page.file, "generated_by", None):
-            first_revision_timestamp = int(time.time())
-        else:
-            first_revision_timestamp = self.util.get_git_commit_timestamp(
-                path=page.file.abs_src_path,
-                is_first_commit=True,
-            )
+        # if getattr(page.file, "generated_by", None):
+        #     first_revision_timestamp = int(time.time())
+        # else:
+        #     first_revision_timestamp = self.util.get_git_commit_timestamp(
+        #         path=page.file.abs_src_path,
+        #         is_first_commit=True,
+        #     )
+
+        # If date exists in the page meta, use the value.
+        meta_created = page.meta["date"]
+        tuple = meta_created.timetuple()
+        first_revision_timestamp = time.mktime(tuple)
 
         # Creation date formats
         creation_dates = self.util.get_date_formats_for_timestamp(first_revision_timestamp, locale=locale, add_spans=True)
