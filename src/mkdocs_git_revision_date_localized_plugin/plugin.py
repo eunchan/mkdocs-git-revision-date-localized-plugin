@@ -43,6 +43,7 @@ class GitRevisionDateLocalizedPlugin(BasePlugin):
         ("enable_creation_date", config_options.Type(bool, default=False)),
         ("enabled", config_options.Type(bool, default=True)),
         ("strict", config_options.Type(bool, default=True)),
+        ("search_dir", config_options.Type(str, default="posts"))
     )
 
     def on_config(self, config: config_options.Config, **kwargs) -> Dict[str, Any]:
@@ -69,7 +70,7 @@ class GitRevisionDateLocalizedPlugin(BasePlugin):
 
         # Save last commit timestamp for entire site
         self.last_site_revision_timestamp = self.util.get_git_commit_timestamp(
-            config.get('docs_dir')
+            self.config.get('search_dir')
         )
 
         # Get locale from plugin configuration
@@ -204,8 +205,15 @@ class GitRevisionDateLocalizedPlugin(BasePlugin):
         if getattr(page.file, "generated_by", None):
             last_revision_timestamp = int(time.time())
         else:
+            src_path = page.file.abs_src_path
+            doc_dir = config.get('docs_dir')
+            docs_relpath = os.path.relpath(src_path, doc_dir)
+            target_path = os.path.join(self.config.get("search_dir"), docs_relpath)
+            target_abs_path = os.path.abspath(target_path)
+            # logging.warning(f"{src_path} / {doc_dir} / {docs_relpath} / {target_path} / {target_abs_path}")
             last_revision_timestamp = self.util.get_git_commit_timestamp(
-                    path=page.file.abs_src_path,
+                    #path=page.file.abs_src_path,
+                    path=target_abs_path,
                     is_first_commit=False,
             )
 
